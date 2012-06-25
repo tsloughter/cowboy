@@ -106,10 +106,12 @@ uri_too_long(Req, State) ->
 %% allowed_methods/2 should return a list of atoms or binary methods.
 allowed_methods(Req=#http_req{method=Method}, State) ->
 	case call(Req, State, allowed_methods) of
-		no_call when Method =:= 'HEAD'; Method =:= 'GET' ->
+		no_call when Method =:= 'HEAD'; Method =:= 'GET';
+                             Method =:= 'OPTIONS' ->
 			next(Req, State, fun malformed_request/2);
 		no_call ->
-			method_not_allowed(Req, State, ['GET', 'HEAD']);
+			method_not_allowed(Req, State, ['GET', 'HEAD',
+                                                        'OPTIONS']);
 		{halt, Req2, HandlerState} ->
 			terminate(Req2, State#state{handler_state=HandlerState});
 		{List, Req2, HandlerState} ->
@@ -174,7 +176,14 @@ options(Req=#http_req{method='OPTIONS'}, State) ->
 		{halt, Req2, HandlerState} ->
 			terminate(Req2, State#state{handler_state=HandlerState});
 		{ok, Req2, HandlerState} ->
-			respond(Req2, State#state{handler_state=HandlerState}, 200)
+			respond(Req2, State#state{handler_state=HandlerState}, 200);
+		no_call ->
+			Methods = ['GET', 'HEAD', 'OPTIONS'],
+			{ok, Req2} = cowboy_http_req:set_resp_header(
+				       <<"Allow">>,
+				       method_not_allowed_build(Methods, []),
+				       Req),
+			respond(Req2, State, 200)
 	end;
 options(Req, State) ->
 	content_types_provided(Req, State).
