@@ -67,8 +67,9 @@ transport(#client{transport=Transport, socket=Socket}) ->
 
 close(#client{socket=undefined}) ->
 	{error, notconnected};
-close(#client{transport=Transport, socket=Socket}) ->
-	Transport:close(Socket).
+close(Client=#client{transport=Transport, socket=Socket}) ->
+	Transport:close(Socket),
+	{ok, Client#client{state=wait}}.
 
 connect(Transport, Host, Port, Client)
 		when is_binary(Host) ->
